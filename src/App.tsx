@@ -76,9 +76,9 @@ class ModuleErrorBoundary extends React.Component<{ children: React.ReactNode },
   render() {
     if (this.state.failed) {
       return (
-        <section role="alert" className="rounded-2xl border border-amber-500/30 bg-slate-900 p-6 text-slate-100">
+        <section role="alert" className="rounded-2xl border border-amber-500/30 bg-white p-6 text-slate-100">
           <h2 className="text-lg font-bold">Não foi possível abrir este módulo</h2>
-          <p className="mt-2 text-sm text-slate-300">Verifique sua conexão. Você pode acessar outro módulo pelo menu ou recarregar o aplicativo. Alterações ainda não salvas podem ser perdidas ao recarregar.</p>
+          <p className="mt-2 text-sm text-slate-600">Verifique sua conexão. Você pode acessar outro módulo pelo menu ou recarregar o aplicativo. Alterações ainda não salvas podem ser perdidas ao recarregar.</p>
           <button type="button" onClick={() => window.location.reload()} className="mt-4 min-h-11 rounded-xl bg-blue-600 px-4 font-semibold text-white">Recarregar aplicativo</button>
         </section>
       );
@@ -273,7 +273,7 @@ const MainApp: React.FC = () => {
   const turnoAtual =
     horaAtual < 14
       ? { nome: 'Turno 1 — Manhã', icone: Sunrise, cor: 'text-amber-400 bg-amber-950/40 border-amber-800/60' }
-      : { nome: 'Turno 2 — Tarde', icone: Sun, cor: 'text-blue-400 bg-blue-950/40 border-blue-800/60' };
+      : { nome: 'Turno 2 — Tarde', icone: Sun, cor: 'text-blue-600 bg-blue-950/40 border-blue-800/60' };
 
   const TurnoIcone = turnoAtual.icone;
 
@@ -445,8 +445,8 @@ const MainApp: React.FC = () => {
     };
 
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white font-sans">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 p-6 sm:p-7 rounded-2xl shadow-2xl space-y-5">
+      <div className="auth-essential min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-slate-900 font-sans">
+        <div className="max-w-md w-full bg-white border border-slate-200 p-6 sm:p-7 rounded-2xl shadow-2xl space-y-5">
           {/* Cabeçalho Enxuto */}
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
@@ -454,17 +454,17 @@ const MainApp: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-extrabold tracking-tight text-white">MEU POSTO</h1>
+                <h1 className="text-xl font-extrabold tracking-tight text-slate-900">MEU POSTO</h1>
                 <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase">
                   2.0
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Acesso ao Sistema Operacional</p>
+              <p className="text-xs text-slate-500">Acesso ao Sistema Operacional</p>
             </div>
           </div>
 
           {/* Alternador Entrar / Cadastrar Acesso */}
-          <div className="grid grid-cols-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+          <div className="grid grid-cols-2 p-1 bg-slate-50 rounded-xl border border-slate-200">
             <button
               type="button"
               onClick={() => {
@@ -474,7 +474,7 @@ const MainApp: React.FC = () => {
               className={`py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
                 modoAcesso === 'LOGIN'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-slate-500 hover:text-blue-700'
               }`}
             >
               Entrar
@@ -488,7 +488,7 @@ const MainApp: React.FC = () => {
               className={`py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
                 modoAcesso === 'CADASTRO'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  : 'text-slate-500 hover:text-blue-700'
               }`}
             >
               Cadastrar Acesso
@@ -506,7 +506,7 @@ const MainApp: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => signOut()}
-                  className="self-start text-[11px] underline text-red-300 hover:text-white cursor-pointer"
+                  className="self-start text-[11px] underline text-red-300 hover:text-blue-700 cursor-pointer"
                 >
                   Encerrar sessão de {currentUser.email}
                 </button>
@@ -517,26 +517,26 @@ const MainApp: React.FC = () => {
           {modoAcesso === 'LOGIN' ? (
             <form onSubmit={handleSubmeterLogin} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">E-mail</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail</label>
                 <input
                   type="email"
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Senha</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Senha</label>
                 <input
                   type="password"
                   required
                   value={loginSenha}
                   onChange={(e) => setLoginSenha(e.target.value)}
                   placeholder="Digite sua senha"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
@@ -559,31 +559,31 @@ const MainApp: React.FC = () => {
           ) : (
             <form onSubmit={handleSubmeterCadastro} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Nome Completo</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Nome Completo</label>
                 <input
                   type="text"
                   required
                   value={cadastroNome}
                   onChange={(e) => setCadastroNome(e.target.value)}
                   placeholder="Ex: Carlos Eduardo"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">E-mail de Acesso</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail de Acesso</label>
                 <input
                   type="email"
                   required
                   value={cadastroEmail}
                   onChange={(e) => setCadastroEmail(e.target.value)}
                   placeholder="carlos@meuposto.com"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Criar Senha</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Criar Senha</label>
                 <input
                   type="password"
                   required
@@ -591,18 +591,18 @@ const MainApp: React.FC = () => {
                   value={cadastroSenha}
                   onChange={(e) => setCadastroSenha(e.target.value)}
                   placeholder="Mín. 6 caracteres"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div className="p-2.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-[11px] text-slate-400">
+              <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-[11px] text-slate-500">
                 <span>Cadastro protegido: Novos colaboradores ingressam com perfil operacional. Cargos de gerência e supervisão são validados e promovidos internamente.</span>
               </div>
 
               <button
                 type="submit"
                 disabled={autenticando}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-900 font-bold text-sm rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer"
               >
                 {autenticando ? 'Cadastrando...' : 'Criar Acesso e Entrar'}
               </button>
@@ -614,28 +614,28 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="app-shell min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans print:bg-white print:min-h-0">
+    <div className="app-shell essential-theme min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans print:bg-white print:min-h-0">
       {/* 1. Sidebar Desktop/Tablet Ilustrada e Organizada por Categorias (Colapsável) */}
       <aside
         className={`hidden md:flex flex-col ${
           sidebarCollapsed ? 'w-20' : 'w-60'
-        } app-sidebar bg-slate-900 text-slate-300 border-r border-slate-800 print:hidden shrink-0 transition-all duration-200 select-none`}
+        } app-sidebar bg-white text-slate-600 border-r border-slate-200 print:hidden shrink-0 transition-all duration-200 select-none`}
       >
         {/* Cabeçalho da Marca & Posto com botão para recolher */}
-        <div className="p-3.5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
+        <div className="p-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30 font-bold shrink-0">
               <Fuel className="w-5 h-5" />
             </div>
             {!sidebarCollapsed && (
               <div className="min-w-0 flex-1">
-                <div className="font-extrabold text-white text-sm tracking-wide flex items-center gap-1.5">
+                <div className="font-extrabold text-slate-900 text-sm tracking-wide flex items-center gap-1.5">
                   <span className="truncate">MEU POSTO</span>
                   <span className="text-[9px] font-black px-1.5 py-0.2 bg-blue-600 text-white rounded shrink-0">
                     2.0
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-400 truncate">Gestão operacional</div>
+                <div className="text-[11px] text-slate-500 truncate">Gestão operacional</div>
               </div>
             )}
           </div>
@@ -643,26 +643,26 @@ const MainApp: React.FC = () => {
             type="button"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             title={sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher para modo compacto'}
-            className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition shrink-0 cursor-pointer"
+            className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-700 rounded-lg transition shrink-0 cursor-pointer"
           >
             {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
         </div>
 
         {/* Perfil do Usuário e Turno Ativo */}
-        <div className="p-3 border-b border-slate-800 bg-slate-950/30 space-y-2">
+        <div className="p-3 border-b border-slate-200 bg-slate-50 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <div
-                className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-700"
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200"
                 title={`${userProfile.nome} (${userProfile.role})`}
               >
                 {userProfile.nome.slice(0, 1).toUpperCase()}
               </div>
               {!sidebarCollapsed && (
                 <div className="truncate min-w-0">
-                  <div className="font-semibold text-xs text-white truncate">{userProfile.nome}</div>
-                  <div className="text-[10px] text-blue-400 font-bold uppercase">{userProfile.role}</div>
+                  <div className="font-semibold text-xs text-slate-900 truncate">{userProfile.nome}</div>
+                  <div className="text-[10px] text-blue-600 font-bold uppercase">{userProfile.role}</div>
                 </div>
               )}
             </div>
@@ -670,7 +670,7 @@ const MainApp: React.FC = () => {
               <button
                 onClick={signOut}
                 title="Encerrar sessão"
-                className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+                className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-700 rounded-lg transition"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -685,7 +685,7 @@ const MainApp: React.FC = () => {
             </div>
           ) : (
             <div
-              className="flex items-center justify-center p-1 rounded-lg border text-amber-400 border-slate-700"
+              className="flex items-center justify-center p-1 rounded-lg border text-amber-400 border-slate-200"
               title={turnoAtual.nome}
             >
               <TurnoIcone className="w-3.5 h-3.5" />
@@ -716,19 +716,19 @@ const MainApp: React.FC = () => {
                     } rounded-xl text-xs font-semibold transition active:scale-98 cursor-pointer ${
                       active
                         ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
+                        : 'text-slate-500 hover:bg-blue-50 hover:text-slate-700'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`} />
+                      <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-slate-900' : 'text-slate-500'}`} />
                       {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                     </div>
                     {!sidebarCollapsed && item.tag && (
                       <span
                         className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border shrink-0 ${
                           active
-                            ? 'bg-white/20 text-white border-white/30'
-                            : item.tagColor || 'bg-slate-800 text-slate-400 border-slate-700'
+                            ? 'bg-white/20 text-slate-900 border-white/30'
+                            : item.tagColor || 'bg-slate-100 text-slate-500 border-slate-200'
                         }`}
                       >
                         {item.tag}
@@ -741,7 +741,7 @@ const MainApp: React.FC = () => {
           ))}
 
           {/* Botão de Remoção de Dados de Demonstração */}
-          <div className="pt-2 border-t border-slate-800">
+          <div className="pt-2 border-t border-slate-200">
             <button
               onClick={() => setModalLimpezaAberto(true)}
               className={`w-full flex items-center ${
@@ -756,7 +756,7 @@ const MainApp: React.FC = () => {
         </nav>
 
         {/* Rodapé de Status de Rede e Sincronização na Nuvem */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60 text-[11px] space-y-2">
+        <div className="p-3 border-t border-slate-200 bg-slate-50 text-[11px] space-y-2">
           <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-1.5">
               {isOnline ? (
@@ -765,7 +765,7 @@ const MainApp: React.FC = () => {
                 <WifiOff className="w-3.5 h-3.5 text-rose-400 shrink-0" />
               )}
               {!sidebarCollapsed && (
-                <span className={`text-[11px] font-medium ${isOnline ? 'text-slate-300' : 'text-rose-400'}`}>
+                <span className={`text-[11px] font-medium ${isOnline ? 'text-slate-600' : 'text-rose-400'}`}>
                   {isOnline ? 'Conectado à Nuvem' : 'Modo Offline'}
                 </span>
               )}
@@ -780,7 +780,7 @@ const MainApp: React.FC = () => {
           {!sidebarCollapsed && pendingCount > 0 && (
             <button
               onClick={syncNow}
-              className="w-full py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-semibold rounded-lg transition flex items-center justify-center gap-1 cursor-pointer"
+              className="w-full py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-semibold rounded-lg transition flex items-center justify-center gap-1 cursor-pointer"
             >
               <RefreshCw className="w-3 h-3" />
               <span>Sincronizar Fila Offline</span>
@@ -790,7 +790,7 @@ const MainApp: React.FC = () => {
       </aside>
 
       {/* 2. Topbar Mobile Otimizada para Touch */}
-      <header className="md:hidden bg-slate-900/95 backdrop-blur-md text-white h-14 px-3.5 flex items-center justify-between sticky top-0 z-40 print:hidden border-b border-slate-800">
+      <header className="md:hidden bg-white/95 backdrop-blur-md text-slate-900 h-14 px-3.5 flex items-center justify-between sticky top-0 z-40 print:hidden border-b border-slate-200">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-xs shrink-0">
             <Fuel className="w-4 h-4" />
@@ -798,7 +798,7 @@ const MainApp: React.FC = () => {
           <div className="min-w-0 flex items-center gap-1.5 truncate">
             <span className="font-extrabold text-xs tracking-wide">MEU POSTO</span>
             <span className="text-slate-500 text-xs" aria-hidden="true">·</span>
-            <span className="text-xs font-semibold text-blue-400 truncate">
+            <span className="text-xs font-semibold text-blue-600 truncate">
               {currentTabDef.shortLabel}
             </span>
           </div>
@@ -806,7 +806,7 @@ const MainApp: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <div
-            className="flex items-center gap-1.5 text-xs text-slate-300 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700"
+            className="flex items-center gap-1.5 text-xs text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200"
             title={isOnline ? 'Nuvem Conectada' : 'Offline'}
           >
             {isOnline ? (
@@ -814,13 +814,13 @@ const MainApp: React.FC = () => {
             ) : (
               <WifiOff className="w-3 h-3 text-rose-400 shrink-0" />
             )}
-            <span className="text-[10px] font-medium text-slate-300">{isOnline ? 'Nuvem' : 'Offline'}</span>
+            <span className="text-[10px] font-medium text-slate-600">{isOnline ? 'Nuvem' : 'Offline'}</span>
           </div>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Abrir Menu Completo"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-xl text-slate-200 transition cursor-pointer"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center bg-slate-100 hover:bg-slate-200 active:scale-95 rounded-xl text-slate-700 transition cursor-pointer"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -832,27 +832,27 @@ const MainApp: React.FC = () => {
         <div className="md:hidden fixed inset-0 z-50 flex print:hidden">
           {/* Backdrop escurecido */}
           <div
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
 
           {/* Painel lateral deslizante */}
-          <div className="relative w-80 max-w-[85vw] bg-slate-900 text-slate-200 h-full flex flex-col shadow-2xl border-r border-slate-800 z-10 animate-in slide-in-from-left duration-200">
+          <div className="relative w-80 max-w-[85vw] bg-white text-slate-700 h-full flex flex-col shadow-2xl border-r border-slate-200 z-10 animate-in slide-in-from-left duration-200">
             {/* Header do Drawer */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
                   <Fuel className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-xs text-white">MEU POSTO 2.0</div>
-                  <div className="text-[10px] text-slate-400">{userProfile.nome} ({userProfile.role})</div>
+                  <div className="font-bold text-xs text-slate-900">MEU POSTO 2.0</div>
+                  <div className="text-[10px] text-slate-500">{userProfile.nome} ({userProfile.role})</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center text-slate-500 hover:text-blue-700 rounded-lg hover:bg-slate-100 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -877,15 +877,15 @@ const MainApp: React.FC = () => {
                           setMobileMenuOpen(false);
                         }}
                         className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition active:scale-98 cursor-pointer ${
-                          active ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                          active ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
+                          <Icon className={`w-4 h-4 ${active ? 'text-slate-900' : 'text-slate-500'}`} />
                           <span>{item.label}</span>
                         </div>
                         {item.tag && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
                             {item.tag}
                           </span>
                         )}
@@ -895,7 +895,7 @@ const MainApp: React.FC = () => {
                 </div>
               ))}
 
-              <div className="pt-2 border-t border-slate-800 space-y-2">
+              <div className="pt-2 border-t border-slate-200 space-y-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -911,7 +911,7 @@ const MainApp: React.FC = () => {
                 <button
                   type="button"
                   onClick={signOut}
-                  className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white cursor-pointer"
+                  className="w-full min-h-[44px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-blue-700 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Encerrar Sessão</span>
@@ -928,12 +928,12 @@ const MainApp: React.FC = () => {
         <header className="hidden md:flex items-center justify-between px-6 py-3.5 bg-white border-b border-slate-200 print:hidden shrink-0">
           {/* Breadcrumb e Seção Atual */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-xs font-semibold text-slate-400">Meu Posto</span>
-            <span className="text-xs text-slate-300" aria-hidden="true">/</span>
+            <span className="text-xs font-semibold text-slate-500">Meu Posto</span>
+            <span className="text-xs text-slate-600" aria-hidden="true">/</span>
             <span className="font-bold text-sm text-slate-900 truncate">
               {currentTabDef.label}
             </span>
-            <span className="text-slate-300 hidden lg:inline" aria-hidden="true">·</span>
+            <span className="text-slate-600 hidden lg:inline" aria-hidden="true">·</span>
             <span className="text-xs text-slate-500 hidden lg:inline truncate">
               {currentTabDef.description}
             </span>
@@ -946,7 +946,7 @@ const MainApp: React.FC = () => {
               <span>{turnoAtual.nome}</span>
             </div>
 
-            <span className="text-slate-200 hidden sm:inline" aria-hidden="true">|</span>
+            <span className="text-slate-700 hidden sm:inline" aria-hidden="true">|</span>
 
             <div className="flex items-center gap-1.5 font-medium">
               {isOnline ? (
@@ -966,7 +966,7 @@ const MainApp: React.FC = () => {
 
         {/* Toast de Sucesso */}
         {toastSucesso && (
-          <div className="fixed top-5 right-5 z-50 bg-emerald-700 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in duration-200">
+          <div className="fixed top-5 right-5 z-50 bg-emerald-700 text-slate-900 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in duration-200">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{toastSucesso}</span>
           </div>
@@ -974,7 +974,7 @@ const MainApp: React.FC = () => {
 
         {/* Modal de Confirmação de Remoção de Dados de Demonstração */}
         {modalLimpezaAberto && (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-slate-50/70 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
@@ -1013,7 +1013,7 @@ const MainApp: React.FC = () => {
                   type="button"
                   disabled={limpandoDados}
                   onClick={handleRemoverDadosDemonstracao}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl transition shadow-xs disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-slate-900 font-semibold text-xs rounded-xl transition shadow-xs disabled:opacity-50"
                 >
                   {limpandoDados ? (
                     <>
@@ -1147,72 +1147,15 @@ const MainApp: React.FC = () => {
           </ModuleErrorBoundary>
         </main>
 
-        {/* Barra de Navegação Inferior Rápida (Mobile / Tablet de Pista) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-1 flex items-center justify-around print:hidden pb-safe">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('dashboard');
-              setMobileMenuOpen(false);
-            }}
-            className={`min-h-[48px] min-w-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition active:scale-95 cursor-pointer ${
-              activeTab === 'dashboard' ? 'text-blue-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Início</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('planner');
-              setMobileMenuOpen(false);
-            }}
-            className={`min-h-[48px] min-w-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition active:scale-95 cursor-pointer ${
-              activeTab === 'planner' ? 'text-blue-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Planner</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('afericoes');
-              setMobileMenuOpen(false);
-            }}
-            className={`min-h-[48px] min-w-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition active:scale-95 cursor-pointer ${
-              activeTab === 'afericoes' ? 'text-amber-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Gauge className="w-5 h-5" />
-            <span>Bombas</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('fechamento');
-              setMobileMenuOpen(false);
-            }}
-            className={`min-h-[48px] min-w-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold transition active:scale-95 cursor-pointer ${
-              activeTab === 'fechamento' ? 'text-emerald-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <DollarSign className="w-5 h-5" />
-            <span>Caixa</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="min-h-[48px] min-w-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold text-slate-400 hover:text-white active:scale-95 cursor-pointer"
-          >
-            <Menu className="w-5 h-5" />
-            <span>Menu</span>
-          </button>
+        <nav aria-label="Navegação principal" className="essential-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 grid grid-cols-4 print:hidden pb-safe">
+          {[{ id: 'dashboard', label: 'Início', icon: LayoutDashboard }, { id: 'planner', label: 'Planner', icon: Calendar }, { id: 'funcionarios', label: 'Equipe', icon: Users }].map((item) => (
+            <button key={item.id} type="button" aria-current={activeTab === item.id ? 'page' : undefined}
+              onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
+              className={`min-h-12 flex flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold transition ${activeTab === item.id ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <item.icon className="h-5 w-5" /><span>{item.label}</span>
+            </button>
+          ))}
+          <button type="button" aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen(true)} className="min-h-12 flex flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-slate-500 hover:bg-slate-50"><Menu className="h-5 w-5" /><span>Mais</span></button>
         </nav>
       </div>
     </div>

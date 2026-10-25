@@ -97,3 +97,19 @@
 .app-sidebar { position: sticky; top: 0; height: 100dvh; }
 .app-shell button { touch-action: manipulation; }
 @media print { .app-sidebar { position: static; height: auto; } }
+
+/* Claro essencial: shared visual foundation for every operational module. */
+:root { color-scheme: light; --essential-blue: #2563eb; --essential-ink: #0f172a; --essential-border: #e2e8f0; }
+body { background: #f8fafc; color: var(--essential-ink); }
+.essential-card { border: 1px solid var(--essential-border); border-radius: 1rem; background: #fff; box-shadow: 0 2px 8px #0f172a03; }
+.essential-theme .app-sidebar { background: #fff; border-color: var(--essential-border); }
+.essential-theme main { min-width: 0; }
+.essential-theme input:not([type="checkbox"]):not([type="radio"]), .essential-theme select, .essential-theme textarea { border-radius: .75rem; }
+.essential-theme button { touch-action: manipulation; }
+.essential-theme h1, .essential-theme h2 { letter-spacing: -.025em; }
+.essential-theme :is(.bg-slate-900, .bg-slate-800, .bg-gradient-to-r.from-slate-900) { background: #fff; color: #0f172a; border-color: #e2e8f0; }
+.essential-theme :is(.bg-slate-900, .bg-slate-800, .from-slate-900) :is(.text-white, .text-slate-300) { color: #334155; }
+.essential-theme :is(.bg-slate-900, .bg-slate-800, .from-slate-900) .bg-blue-600 { color: #fff; }
+.essential-theme .app-sidebar button[aria-current="page"] { background: #eff6ff; color: #2563eb; box-shadow: none; }
+.essential-theme .app-sidebar button[aria-current="page"] svg { color: #2563eb; }
+@media (max-width: 767px) { .essential-theme main { padding: 1.25rem 1rem calc(6rem + env(safe-area-inset-bottom)); } .essential-bottom-nav { box-shadow: 0 -4px 20px #0f172a05; } }
