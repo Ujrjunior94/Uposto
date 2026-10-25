@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "diagnostico:escala": "tsx scripts/diagnostico-escala-firestore.ts"
+    "diagnostico:escala": "tsx scripts/diagnostico-escala-firestore.ts",
+    "test:escala": "node --import tsx --test tests/schedule-ocr.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
