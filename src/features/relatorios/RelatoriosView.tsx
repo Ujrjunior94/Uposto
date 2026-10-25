@@ -1779,7 +1779,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
             t.codigo,
             t.produto,
             `${t.capacidadeNominal.toLocaleString('pt-BR')} L`,
-            `${t.volumeAtual.toLocaleString('pt-BR')} L`,
+            `${t.volumeAtual == null ? 'Não informado' : `${Number(t.volumeAtual).toLocaleString('pt-BR')} L`}`,
             `${((t.volumeAtual / Math.max(1, t.capacidadeNominal)) * 100).toFixed(1)}%`,
           ]),
           theme: 'grid',
@@ -5381,7 +5381,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     <td className="py-2 px-3">{t.produto}</td>
                     
                     <td className="py-2 px-3 font-mono font-bold">
-                      {t.volumeAtual.toLocaleString('pt-BR')} L
+                      {t.volumeAtual == null ? 'Não informado' : `${Number(t.volumeAtual).toLocaleString('pt-BR')} L`}
                     </td>
                   </tr>
                 ))}
