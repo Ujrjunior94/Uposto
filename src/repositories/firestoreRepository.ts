@@ -165,6 +165,12 @@ export class PostoSubcollectionRepository<T extends { id: string }> {
     }
   }
 
+  /** For imports: a failed read must not be mistaken for an empty collection. */
+  async getAllStrict(postoId: string): Promise<T[]> {
+    const snap = await getDocs(this.getCollection(postoId));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id } as T));
+  }
+
   async getAll(postoId: string, ...constraints: QueryConstraint[]): Promise<T[]> {
     const path = `postos/${postoId}/${this.subcollectionName}`;
     try {
