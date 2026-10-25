@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SyncProvider, useSync } from './contexts/SyncContext';
 import {
@@ -18,17 +18,17 @@ import {
   EscalaImportada,
 } from './types';
 import { PostoSubcollectionRepository, testConnection, registrarAuditoria } from './repositories/firestoreRepository';
-import { DashboardView } from './features/dashboard/DashboardView';
-import { FuncionariosView } from './features/funcionarios/FuncionariosView';
-import { PlannerView } from './features/planner/PlannerView';
-import { FechamentoCaixaView } from './features/fechamento/FechamentoCaixaView';
-import { SobrasFaltasView } from './features/sobras-faltas/SobrasFaltasView';
-import { LMCView } from './features/lmc/LMCView';
-import { TanquesView } from './features/tanques/TanquesView';
-import { BicosAfericoesView } from './features/afericoes/BicosAfericoesView';
-import { AnalisesConformidadeView } from './features/analises/AnalisesConformidadeView';
-import { RelatoriosView } from './features/relatorios/RelatoriosView';
-import { IAEscalaView } from './features/ia-escala/IAEscalaView';
+const DashboardView = lazy(() => import('./features/dashboard/DashboardView').then(module => ({ default: module.DashboardView })));
+const FuncionariosView = lazy(() => import('./features/funcionarios/FuncionariosView').then(module => ({ default: module.FuncionariosView })));
+const PlannerView = lazy(() => import('./features/planner/PlannerView').then(module => ({ default: module.PlannerView })));
+const FechamentoCaixaView = lazy(() => import('./features/fechamento/FechamentoCaixaView').then(module => ({ default: module.FechamentoCaixaView })));
+const SobrasFaltasView = lazy(() => import('./features/sobras-faltas/SobrasFaltasView').then(module => ({ default: module.SobrasFaltasView })));
+const LMCView = lazy(() => import('./features/lmc/LMCView').then(module => ({ default: module.LMCView })));
+const TanquesView = lazy(() => import('./features/tanques/TanquesView').then(module => ({ default: module.TanquesView })));
+const BicosAfericoesView = lazy(() => import('./features/afericoes/BicosAfericoesView').then(module => ({ default: module.BicosAfericoesView })));
+const AnalisesConformidadeView = lazy(() => import('./features/analises/AnalisesConformidadeView').then(module => ({ default: module.AnalisesConformidadeView })));
+const RelatoriosView = lazy(() => import('./features/relatorios/RelatoriosView').then(module => ({ default: module.RelatoriosView })));
+const IAEscalaView = lazy(() => import('./features/ia-escala/IAEscalaView').then(module => ({ default: module.IAEscalaView })));
 import {
   LayoutDashboard,
   Users,
@@ -65,6 +65,28 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 
+class ModuleErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  declare props: { children: React.ReactNode };
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <section role="alert" className="rounded-2xl border border-amber-500/30 bg-slate-900 p-6 text-slate-100">
+          <h2 className="text-lg font-bold">Não foi possível abrir este módulo</h2>
+          <p className="mt-2 text-sm text-slate-300">Verifique sua conexão. Você pode acessar outro módulo pelo menu ou recarregar o aplicativo. Alterações ainda não salvas podem ser perdidas ao recarregar.</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-4 min-h-11 rounded-xl bg-blue-600 px-4 font-semibold text-white">Recarregar aplicativo</button>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const repoFunc = new PostoSubcollectionRepository<Funcionario>('funcionarios');
 const repoEscalas = new PostoSubcollectionRepository<Escala>('escalas');
 const repoFech = new PostoSubcollectionRepository<FechamentoCaixa>('fechamentos');
@@ -96,45 +118,45 @@ interface MenuCategoryDef {
 
 const MENU_CATEGORIES: MenuCategoryDef[] = [
   {
-    title: 'Visão Geral',
+    title: 'Início',
     items: [
       {
         id: 'dashboard',
-        label: 'Dashboard Operacional',
-        shortLabel: 'Dashboard',
+        label: 'Visão geral',
+        shortLabel: 'Início',
         icon: LayoutDashboard,
         description: 'Métricas em tempo real, tanques e status da pista',
       },
     ],
   },
   {
-    title: 'Equipe & Escala',
+    title: 'Equipe',
     items: [
       {
         id: 'planner',
-        label: 'Planner & Escalas',
+        label: 'Planner de escalas',
         shortLabel: 'Planner',
         icon: Calendar,
         description: 'Planejamento mensal e folgas da equipe',
       },
       {
         id: 'funcionarios',
-        label: 'Funcionários de Pista',
+        label: 'Funcionários',
         shortLabel: 'Funcionários',
         icon: Users,
         description: 'Cadastro de frentistas, cargos e turnos',
       },
       {
         id: 'ia-escala',
-        label: 'IA — Leitor de Escala',
-        shortLabel: 'Escala com IA',
+        label: 'Ler escala por foto',
+        shortLabel: 'Ler escala',
         icon: Sparkles,
         description: 'OCR inteligente de fotos de folhas e quadros',
       },
     ],
   },
   {
-    title: 'Caixa & Faturamento',
+    title: 'Rotina',
     items: [
       {
         id: 'fechamento',
@@ -145,7 +167,7 @@ const MENU_CATEGORIES: MenuCategoryDef[] = [
       },
       {
         id: 'sobras-faltas',
-        label: 'Sobras, Faltas & Rateio',
+        label: 'Sobras e faltas',
         shortLabel: 'Rateio',
         icon: Scale,
         description: 'Divisão justa de divergências entre operadores',
@@ -160,7 +182,7 @@ const MENU_CATEGORIES: MenuCategoryDef[] = [
     ],
   },
   {
-    title: 'Pátio & Qualidade',
+    title: 'Pista e qualidade',
     items: [
       {
         id: 'tanques',
@@ -186,11 +208,11 @@ const MENU_CATEGORIES: MenuCategoryDef[] = [
     ],
   },
   {
-    title: 'Governança',
+    title: 'Relatórios',
     items: [
       {
         id: 'relatorios',
-        label: 'Relatórios & Auditoria',
+        label: 'Relatórios e histórico',
         shortLabel: 'Relatórios',
         icon: FileText,
         description: 'Exportação PDF/Excel e rastreabilidade total',
@@ -592,17 +614,17 @@ const MainApp: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row text-slate-900 font-sans print:bg-white print:min-h-0">
+    <div className="app-shell min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 font-sans print:bg-white print:min-h-0">
       {/* 1. Sidebar Desktop/Tablet Ilustrada e Organizada por Categorias (Colapsável) */}
       <aside
         className={`hidden md:flex flex-col ${
-          sidebarCollapsed ? 'w-20' : 'w-64'
-        } bg-slate-900 text-slate-300 border-r border-slate-800 print:hidden shrink-0 transition-all duration-200 select-none`}
+          sidebarCollapsed ? 'w-20' : 'w-60'
+        } app-sidebar bg-slate-900 text-slate-300 border-r border-slate-800 print:hidden shrink-0 transition-all duration-200 select-none`}
       >
         {/* Cabeçalho da Marca & Posto com botão para recolher */}
         <div className="p-3.5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-blue-600/30 font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/30 font-bold shrink-0">
               <Fuel className="w-5 h-5" />
             </div>
             {!sidebarCollapsed && (
@@ -613,7 +635,7 @@ const MainApp: React.FC = () => {
                     2.0
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-400 truncate">Matriz Central</div>
+                <div className="text-[11px] text-slate-400 truncate">Gestão operacional</div>
               </div>
             )}
           </div>
@@ -687,9 +709,10 @@ const MainApp: React.FC = () => {
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
+                    aria-current={active ? 'page' : undefined}
                     title={item.label}
                     className={`w-full flex items-center ${
-                      sidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
+                      sidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2.5'
                     } rounded-xl text-xs font-semibold transition active:scale-98 cursor-pointer ${
                       active
                         ? 'bg-blue-600 text-white shadow-xs'
@@ -722,7 +745,7 @@ const MainApp: React.FC = () => {
             <button
               onClick={() => setModalLimpezaAberto(true)}
               className={`w-full flex items-center ${
-                sidebarCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+                sidebarCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2.5'
               } rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition cursor-pointer`}
               title="Resetar banco de demonstração"
             >
@@ -929,7 +952,7 @@ const MainApp: React.FC = () => {
               {isOnline ? (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="text-slate-600">Nuvem 24h</span>
+                  <span className="text-slate-600">Online</span>
                 </>
               ) : (
                 <>
@@ -1009,42 +1032,10 @@ const MainApp: React.FC = () => {
           </div>
         )}
 
-        {/* Barra Visual de Ícones de Representação Operacional (Acesso Direto 1-Clique) */}
-        <div className="bg-slate-900/95 border-b border-slate-800 px-4 md:px-6 py-2.5 overflow-x-auto print:hidden shrink-0">
-          <div className="flex items-center gap-2 min-w-max max-w-7xl mx-auto">
-            {ALL_MENU_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isAtivo = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  title={item.description}
-                  className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    isAtivo
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80'
-                  }`}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition ${
-                      isAtivo
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-900 text-blue-400 group-hover:text-amber-400'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <span>{item.shortLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Conteúdo Principal Renderizado */}
-        <main className="flex-1 p-3 sm:p-5 md:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full print:p-0 print:m-0 print:max-w-none print:overflow-visible">
+        <main id="conteudo-principal" tabIndex={-1} className="flex-1 p-3 sm:p-5 md:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full print:p-0 print:m-0 print:max-w-none print:overflow-visible">
+          <ModuleErrorBoundary key={activeTab}>
+          <Suspense fallback={<div role="status" aria-live="polite" className="flex min-h-48 items-center justify-center gap-3 text-slate-500"><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />Carregando módulo…</div>}>
           {activeTab === 'dashboard' && (
             <DashboardView
               funcionarios={funcionarios}
@@ -1152,6 +1143,8 @@ const MainApp: React.FC = () => {
               onNavigateToPlanner={() => setActiveTab('planner')}
             />
           )}
+          </Suspense>
+          </ModuleErrorBoundary>
         </main>
 
         {/* Barra de Navegação Inferior Rápida (Mobile / Tablet de Pista) */}
