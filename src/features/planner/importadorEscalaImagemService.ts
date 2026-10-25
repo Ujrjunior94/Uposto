@@ -114,6 +114,7 @@ export interface RegistroImportadoReconhecido {
   horarioInicio: string;
   horarioFim: string;
   isCustomManual?: boolean;
+  conferidoManualmente?: boolean;
 }
 
 export interface ResultadoImportacaoEscala {
@@ -549,25 +550,14 @@ export function resolveDay(
   headers: string[] = [],
   totalDaysInMonth: number
 ): { valid: boolean; day: number; observation: string } {
-  let dayNum = typeof rawDay === 'number' ? rawDay : parseInt(String(rawDay || ''), 10);
-
-  if (isNaN(dayNum) || dayNum < 1 || dayNum > totalDaysInMonth) {
-    // Tenta inferir pelo cabeçalho da coluna se houver
-    const headerCol = headers[columnIndex];
-    if (headerCol) {
-      const match = headerCol.match(/\b([0-2]?[0-9]|3[0-1])\b/);
-      if (match) {
-        dayNum = parseInt(match[1], 10);
-      }
-    }
-  }
-
-  if (isNaN(dayNum) || dayNum < 1 || dayNum > totalDaysInMonth) {
-    return {
-      valid: false,
-      day: Math.max(1, Math.min(totalDaysInMonth, columnIndex || 1)),
-      observation: `Dia ${rawDay} inválido para este mês (deve estar entre 1 e ${totalDaysInMonth}).`,
-    };
+  const parseDay = (value: unknown): number => {
+    const text = String(value ?? '').trim();
+    return /^\d{1,2}$/.test(text) ? Number(text) : NaN;
+  };
+  let dayNum = parseDay(rawDay);
+  if (!Number.isInteger(dayNum)) dayNum = parseDay(headers[columnIndex]);
+  if (!Number.isInteger(dayNum) || dayNum < 1 || dayNum > totalDaysInMonth) {
+    return { valid: false, day: 0, observation: 'Dia não identificado ou inválido para este mês. Selecione o dia correto.' };
   }
 
   return {
@@ -648,6 +638,8 @@ export function validateRecord(
     horarioFim = shiftRes.horarioFim;
   }
 
+  const confidence = typeof rec.confidence === 'number' && Number.isFinite(rec.confidence) ? Math.max(0, Math.min(1, rec.confidence)) : 0;
+
   // Determinar Status Final
   let status: StatusValidacao = 'CONFIRMADO';
   const obsList: string[] = [];
@@ -671,6 +663,11 @@ export function validateRecord(
     status = 'REVISAO';
   }
 
+  if (confidence < 0.85 && !rec.conferidoManualmente && !rec.isCustomManual) {
+    if (status === 'CONFIRMADO') status = 'REVISAO';
+    obsList.push('Leitura com baixa confiança. Compare com a foto e confirme esta célula.');
+  }
+
   return {
     id: rec.id || `rec-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
     rowIndex: rec.rowIndex ?? 0,
@@ -683,14 +680,27 @@ export function validateRecord(
     shiftId: finalShiftId,
     shiftName: finalShiftName,
     shiftSigla: finalShiftSigla,
-    confidence: rec.confidence ?? (status === 'CONFIRMADO' ? 0.95 : 0.5),
+    confidence,
     status,
     observation: obsList.join(' ') || rec.observation || 'Validado com sucesso.',
     isFolga,
     horarioInicio,
     horarioFim,
     isCustomManual: rec.isCustomManual,
+    conferidoManualmente: rec.conferidoManualmente,
   };
+}
+
+/** Revalidate the whole review after edits/removals so duplicate cells cannot overwrite each other. */
+export function revalidarRegistrosEscala(records: RegistroImportadoReconhecido[], employees: Funcionario[],
+  shifts: TurnoCadastrado[], totalDays: number): RegistroImportadoReconhecido[] {
+  const validated = records.map(record => validateRecord(record, employees, shifts, totalDays));
+  const counts = new Map<string, number>();
+  const key = (r: RegistroImportadoReconhecido) => `${r.employeeId || normalizeName(r.rawEmployeeText)}:${r.day}`;
+  validated.forEach(r => { if (r.day > 0) counts.set(key(r), (counts.get(key(r)) || 0) + 1); });
+  return validated.map(r => r.day > 0 && (counts.get(key(r)) || 0) > 1
+    ? { ...r, status: 'REVISAO', observation: 'Duas células para o mesmo funcionário e dia. Corrija o dia ou remova a duplicata.' }
+    : r);
 }
 
 // ============================================================================
@@ -707,17 +717,23 @@ export function processarLeituraBrutaParaValidacao(
   const recordsValidados: RegistroImportadoReconhecido[] = [];
 
   // Se a IA enviou a grade estruturada em linhas e colunas (Grid)
-  if (respostaIA?.grid?.rows && Array.isArray(respostaIA.grid.rows)) {
+  if (Array.isArray(respostaIA?.grid?.rows) && respostaIA.grid.rows.length > 0) {
     const headers = Array.isArray(respostaIA.grid.headers) ? respostaIA.grid.headers : [];
 
     respostaIA.grid.rows.forEach((row: any, rIdx: number) => {
       const rawNome = String(row.employeeCell?.rawText || '').trim();
       const dayCells = Array.isArray(row.dayCells) ? row.dayCells : [];
+      if (dayCells.length === 0) {
+        recordsValidados.push(validateRecord({
+          id: `row-${rIdx}-unresolved`, rowIndex: rIdx, columnIndex: 0,
+          rawEmployeeText: rawNome, rawShiftText: '', day: 0, confidence: 0,
+        }, employees, shifts, totalDaysInMonth));
+      }
 
       dayCells.forEach((dCell: any, cIdx: number) => {
         const rawShift = String(dCell.rawText || '').trim();
         const colIndex = typeof dCell.columnIndex === 'number' ? dCell.columnIndex : cIdx + 1;
-        const dayNum = typeof dCell.day === 'number' ? dCell.day : colIndex;
+        const dayNum = resolveDay(dCell.day, colIndex, headers, totalDaysInMonth).day;
 
         const partialRec: Partial<RegistroImportadoReconhecido> = {
           id: `row-${rIdx}-col-${colIndex}`,
@@ -726,26 +742,32 @@ export function processarLeituraBrutaParaValidacao(
           rawEmployeeText: rawNome,
           rawShiftText: rawShift,
           day: dayNum,
-          confidence: dCell.confidence || 0.9,
+          confidence: Math.min(row.employeeCell?.confidence ?? 0, dCell.confidence ?? 0),
         };
 
         const validado = validateRecord(partialRec, employees, shifts, totalDaysInMonth);
         recordsValidados.push(validado);
       });
     });
-  } else if (respostaIA?.cells && Array.isArray(respostaIA.cells)) {
+  } else if (Array.isArray(respostaIA?.cells) && respostaIA.cells.length > 0) {
     // Se a IA enviou a lista linear de células com rowIndex e columnIndex
     // Agrupa as células por rowIndex
-    const rowsMap = new Map<number, { employeeRaw: string; cells: any[] }>();
+    const rowsMap = new Map<number, { employeeRaw: string; employeeConfidence: number; cells: any[] }>();
 
+    const headers: string[] = [];
     respostaIA.cells.forEach((cell: any) => {
+      if (cell.role === 'DAY_NUMBER') headers[cell.columnIndex] = String(cell.rawText ?? '');
+    });
+    respostaIA.cells.forEach((cell: any) => {
+      if (cell.role === 'HEADER' || cell.role === 'DAY_NUMBER') return;
       const r = cell.rowIndex ?? 0;
       if (!rowsMap.has(r)) {
-        rowsMap.set(r, { employeeRaw: '', cells: [] });
+        rowsMap.set(r, { employeeRaw: '', employeeConfidence: 0, cells: [] });
       }
       const entry = rowsMap.get(r)!;
       if (cell.columnIndex === 0 || cell.role === 'EMPLOYEE') {
         entry.employeeRaw = cell.rawText || '';
+        entry.employeeConfidence = cell.confidence ?? 0;
       } else {
         entry.cells.push(cell);
       }
@@ -759,8 +781,8 @@ export function processarLeituraBrutaParaValidacao(
           columnIndex: cCell.columnIndex ?? cIdx + 1,
           rawEmployeeText: entry.employeeRaw,
           rawShiftText: cCell.rawText || '',
-          day: cCell.columnIndex ?? cIdx + 1,
-          confidence: cCell.confidence || 0.85,
+          day: resolveDay(cCell.day, cCell.columnIndex, headers, totalDaysInMonth).day,
+          confidence: Math.min(cCell.confidence ?? 0, entry.employeeConfidence),
         };
         const validado = validateRecord(partialRec, employees, shifts, totalDaysInMonth);
         recordsValidados.push(validado);
@@ -775,7 +797,7 @@ export function processarLeituraBrutaParaValidacao(
       if (dias.length > 0) {
         dias.forEach((dItem: any, cIdx: number) => {
           const rawShift = String(dItem.codigoOriginal || dItem.turno || dItem.status || '').trim();
-          const dayNum = parseInt(String(dItem.dia || cIdx + 1), 10);
+          const dayNum = resolveDay(dItem.dia, -1, [], totalDaysInMonth).day;
           const partialRec: Partial<RegistroImportadoReconhecido> = {
             id: `legacy-${rIdx}-d${dayNum}`,
             rowIndex: rIdx,
@@ -783,37 +805,28 @@ export function processarLeituraBrutaParaValidacao(
             rawEmployeeText: rawNome,
             rawShiftText: rawShift,
             day: dayNum,
-            confidence: 0.9,
+            confidence: Math.min(dItem.confidence ?? 0, colab.confidence ?? 0),
           };
           const validado = validateRecord(partialRec, employees, shifts, totalDaysInMonth);
           recordsValidados.push(validado);
         });
       } else {
-        // Colaborador com turno padrão semanal
-        const turnoPadrao = colab.turnoPadrao || colab.siglaTurnoPadrao || 'T1';
-        for (let d = 1; d <= totalDaysInMonth; d++) {
-          const ehFolga = d % 7 === 0;
-          const partialRec: Partial<RegistroImportadoReconhecido> = {
-            id: `legacy-std-${rIdx}-d${d}`,
-            rowIndex: rIdx,
-            columnIndex: d,
-            rawEmployeeText: rawNome,
-            rawShiftText: ehFolga ? 'S' : turnoPadrao,
-            day: d,
-            confidence: 0.88,
-          };
-          const validado = validateRecord(partialRec, employees, shifts, totalDaysInMonth);
-          recordsValidados.push(validado);
-        }
+        // A name or weekly pattern is not evidence for any calendar day.
+        recordsValidados.push(validateRecord({
+          id: `legacy-unresolved-${rIdx}`, rowIndex: rIdx, columnIndex: 0,
+          rawEmployeeText: rawNome, rawShiftText: '', day: 0, confidence: 0,
+        }, employees, shifts, totalDaysInMonth));
       }
     });
   }
 
+  const checked = revalidarRegistrosEscala(recordsValidados, employees, shifts, totalDaysInMonth);
+  recordsValidados.splice(0, recordsValidados.length, ...checked);
   const totalReconhecidos = recordsValidados.length;
   const totalConfirmados = recordsValidados.filter((r) => r.status === 'CONFIRMADO').length;
   const totalRevisao = recordsValidados.filter((r) => r.status === 'REVISAO').length;
   const totalNaoIdentificados = recordsValidados.filter((r) => r.status === 'NAO_IDENTIFICADO').length;
-  const totalProntosParaImportar = recordsValidados.filter((r) => r.employeeId && r.shiftId).length;
+  const totalProntosParaImportar = recordsValidados.filter((r) => r.status === 'CONFIRMADO' && r.employeeId && r.shiftId).length;
 
   return {
     month,
