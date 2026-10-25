@@ -55,6 +55,54 @@ import {
   ItemRelatorioCombustivel5Colunas,
 } from '../../utils/pdfGenerator';
 
+
+/** Keeps the same report data readable as labeled cards on narrow screens. */
+function ReportTable({ children, className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
+  type Element = React.ReactElement<{ children?: React.ReactNode; colSpan?: number; 'data-label'?: string }>;
+  const elements = (nodes: React.ReactNode): Element[] =>
+    React.Children.toArray(nodes).flatMap((node) => {
+      if (!React.isValidElement(node)) return [];
+      const element = node as Element;
+      return element.type === React.Fragment ? elements(element.props.children) : [element];
+    });
+  const text = (node: React.ReactNode): string => React.Children.toArray(node).map((item): string =>
+    React.isValidElement(item) ? text((item as Element).props.children) : String(item)
+  ).join(' ').trim();
+  const sections = elements(children);
+  const header = sections.find((section) => section.type === 'thead');
+  const headerRow = header && elements(header.props.children).find((row) => row.type === 'tr');
+  const labels = headerRow ? elements(headerRow.props.children).map((cell) => text(cell.props.children)) : [];
+  const labeledSections = sections.map((section) => {
+    if (section.type !== 'tbody' && section.type !== 'tfoot') return section;
+    return React.cloneElement(section, {}, elements(section.props.children).map((row) => {
+      if (row.type !== 'tr') return row;
+      let column = 0;
+      return React.cloneElement(row, {}, elements(row.props.children).map((cell) => {
+        const label = labels[column] || '';
+        column += cell.props.colSpan || 1;
+        return React.cloneElement(cell, { 'data-label': cell.props.colSpan && cell.props.colSpan > 1 ? '' : label });
+      }));
+    }));
+  });
+  return <table {...props} className={`report-table ${className || ''}`}>{labeledSections}</table>;
+}
+
+const reportMobileStyles = `
+@media screen and (max-width: 639px) {
+  .report-table { display: block; width: 100%; min-width: 0; }
+  .report-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .report-table tbody, .report-table tfoot { display: block; width: 100%; }
+  .report-table tr { display: block; margin: 8px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px 10px; background: white; }
+  .report-table td { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; align-items: start; padding: 9px 0; white-space: normal; overflow-wrap: anywhere; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+  .report-table td::before { content: attr(data-label); font-family: sans-serif; font-weight: 600; color: #64748b; text-align: left; }
+  .report-table td[data-label=""] { display: block; }
+  .report-table td[data-label=""]::before { display: none; }
+  .report-table td:last-child { border-bottom: 0; }
+  .report-table td > * { min-width: 0; }
+  .reports-view { min-width: 0; overflow-wrap: anywhere; }
+}
+`;
+
 interface RelatoriosProps {
   funcionarios: Funcionario[];
   escalas: Escala[];
@@ -2523,7 +2571,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                         </div>
                         <div className="text-[9.5px] text-slate-600 space-y-0.5">
                           <div className="flex justify-between">
-                            <span>{b.bombaNome}</span>
+                            
                             <span className="font-semibold text-slate-800">{b.qtdTestes} teste(s) ({b.volumeAferidoTotal.toFixed(1)}L)</span>
                           </div>
                           <div className="flex justify-between">
@@ -2955,7 +3003,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
           </div>
 
           <div className="overflow-x-auto border border-slate-200 rounded-xl">
-            <table className="w-full text-xs text-left">
+            <ReportTable className="w-full text-xs text-left">
               <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                 <tr>
                   <th className="py-2.5 px-3">Tipo de Combustível</th>
@@ -3063,7 +3111,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                   </tr>
                 </tfoot>
               )}
-            </table>
+            </ReportTable>
           </div>
         </div>
 
@@ -3194,11 +3242,11 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     {/* Tabela dos Ensaios Volumétricos daquele Combustível */}
                     {isExpandido && (
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-left">
+                        <ReportTable className="w-full text-xs text-left">
                           <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase text-[11px]">
                             <tr>
                               <th className="py-2.5 px-3">Data / Hora</th>
-                              <th className="py-2.5 px-3">Bico / Bomba</th>
+                              <th className="py-2.5 px-3">Bico</th>
                               <th className="py-2.5 px-3">Nominal</th>
                               <th className="py-2.5 px-3">Vol. Aferido</th>
                               <th className="py-2.5 px-3">Desvio (ml)</th>
@@ -3227,9 +3275,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                                     </td>
                                     <td className="py-2 px-3 font-bold text-slate-900">
                                       Bico {String(bicoNum).padStart(2, '0')}
-                                      <span className="block text-[10px] font-normal text-slate-500">
-                                        {a.bombaNome || 'Bomba'}
-                                      </span>
+                                      
                                     </td>
                                     <td className="py-2 px-3 font-mono">
                                       {Number(a.volumeNominal || 20).toFixed(3)} L
@@ -3295,7 +3341,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                               </tr>
                             </tfoot>
                           )}
-                        </table>
+                        </ReportTable>
                       </div>
                     )}
                   </div>
@@ -3314,15 +3360,15 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                 Informações de Bicos Aferidos & Valor Total por Bico
               </h5>
               <span className="text-[11px] text-slate-500">
-                Controle de bico, bomba, tanque, encerrante, lacre e desvio individual
+                Testes, volumes e desvios por bico
               </span>
             </div>
 
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-xs text-left">
+              <ReportTable className="w-full text-xs text-left">
                 <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                   <tr>
-                    <th className="py-2.5 px-3">Bico / Bomba</th>
+                    <th className="py-2.5 px-3">Bico</th>
                     <th className="py-2.5 px-3">Combustível</th>
                     <th className="py-2.5 px-3">Testes</th>
                     <th className="py-2.5 px-3">Volume Total</th>
@@ -3345,7 +3391,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                       <tr key={b.bicoNumero} className="hover:bg-slate-50">
                         <td className="py-2 px-3 font-bold text-slate-900">
                           Bico {String(b.bicoNumero).padStart(2, '0')}
-                          <span className="block text-[10px] font-normal text-slate-500">{b.bombaNome}</span>
+                          
                         </td>
                         <td className="py-2 px-3 font-medium text-slate-800">{b.produto}</td>
                         <td className="py-2 px-3 font-mono">{b.qtdTestes}x</td>
@@ -3405,7 +3451,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     </tr>
                   </tfoot>
                 )}
-              </table>
+              </ReportTable>
             </div>
           </div>
         )}
@@ -3424,7 +3470,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
             </div>
 
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-xs text-left">
+              <ReportTable className="w-full text-xs text-left">
                 <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                   <tr>
                     <th className="py-2.5 px-3">Data / Hora</th>
@@ -3493,7 +3539,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     })
                   )}
                 </tbody>
-              </table>
+              </ReportTable>
             </div>
           </div>
         )}
@@ -3517,7 +3563,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
               Relatório Consolidado & Agrupado por Combustível
             </h4>
             <p className="text-xs text-slate-500 mt-1">
-              Visão técnica unificada: Estoque em Tanques, Encerrantes de Bicos, Ensaios de Aferição Volumétrica (20L / 1.000L) e Laudos Físico-Químicos ANP agrupados por produto.
+              Aferições, estoque e qualidade agrupados por combustível.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -3629,30 +3675,30 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                   ⛽ Bicos de Abastecimento Ativos ({comb.bicos.length})
                 </h6>
                 <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl">
-                  <table className="w-full text-xs text-left">
+                  <ReportTable className="w-full text-xs text-left">
                     <thead className="bg-slate-100 font-bold text-slate-700 uppercase border-b border-slate-200">
                       <tr>
                         <th className="py-2 px-3">Bico Nº</th>
-                        <th className="py-2 px-3">Bomba / Lado</th>
+                        
                         <th className="py-2 px-3">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {comb.bicos.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="py-3 px-3 text-slate-400 text-center">Nenhum bico vinculado a este combustível.</td>
+                          <td colSpan={2} className="py-3 px-3 text-slate-400 text-center">Nenhum bico vinculado a este combustível.</td>
                         </tr>
                       ) : (
                         comb.bicos.map((b: any) => (
                           <tr key={b.id || b.numero}>
                             <td className="py-2 px-3 font-bold text-slate-900">Bico {String(b.numero).padStart(2, '0')}</td>
-                            <td className="py-2 px-3 font-medium text-slate-700">{b.bomba} (Lado {b.lado})</td>
+                            
                             <td className="py-2 px-3 font-semibold text-emerald-700">{b.status || 'Ativo'}</td>
                           </tr>
                         ))
                       )}
                     </tbody>
-                  </table>
+                  </ReportTable>
                 </div>
               </div>
 
@@ -3662,7 +3708,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                   📐 Histórico de Ensaios Metrológicos Inmetro ({comb.afericoes.length})
                 </h6>
                 <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl">
-                  <table className="w-full text-xs text-left">
+                  <ReportTable className="w-full text-xs text-left">
                     <thead className="bg-slate-100 font-bold text-slate-700 uppercase border-b border-slate-200">
                       <tr>
                         <th className="py-2 px-3">Data / Hora</th>
@@ -3707,7 +3753,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                         })
                       )}
                     </tbody>
-                  </table>
+                  </ReportTable>
                 </div>
               </div>
 
@@ -3717,7 +3763,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                   🔬 Ensaios de Qualidade & Densidade ANP ({comb.densidades.length})
                 </h6>
                 <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl">
-                  <table className="w-full text-xs text-left">
+                  <ReportTable className="w-full text-xs text-left">
                     <thead className="bg-slate-100 font-bold text-slate-700 uppercase border-b border-slate-200">
                       <tr>
                         <th className="py-2 px-3">Data / Hora</th>
@@ -3750,7 +3796,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                         ))
                       )}
                     </tbody>
-                  </table>
+                  </ReportTable>
                 </div>
               </div>
             </div>
@@ -4180,7 +4226,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
 
             {/* Visualização 2: Tabela de Fácil Leitura (hidden sm:block) */}
             <div className="hidden sm:block overflow-x-auto bg-white border border-slate-200 rounded-xl shadow-xs">
-              <table className="w-full text-xs text-left">
+              <ReportTable className="w-full text-xs text-left">
                 <thead className="bg-slate-900 font-bold text-white uppercase text-[11px] tracking-wider">
                   <tr>
                     <th className="py-3 px-4 text-left">COMBUSTÍVEL</th>
@@ -4258,7 +4304,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     </td>
                   </tr>
                 </tfoot>
-              </table>
+              </ReportTable>
             </div>
           </div>
         )}
@@ -4384,7 +4430,8 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="reports-view space-y-6">
+      <style>{reportMobileStyles}</style>
       {/* Header Principal */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm print:hidden">
         <div>
@@ -4679,7 +4726,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
 
             {/* Tabela das 5 Colunas */}
             <div className="overflow-x-auto bg-white border border-slate-200 rounded-xl shadow-xs">
-              <table className="w-full text-xs text-left">
+              <ReportTable className="w-full text-xs text-left">
                 <thead className="bg-slate-900 font-bold text-white uppercase text-[11px] tracking-wider">
                   <tr>
                     <th className="py-3.5 px-4 text-left">COMBUSTÍVEL</th>
@@ -4757,7 +4804,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     </td>
                   </tr>
                 </tfoot>
-              </table>
+              </ReportTable>
             </div>
           </div>
         )}
@@ -4896,7 +4943,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
 
               {/* Tabela de Fechamentos no Balanço Consolidado */}
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-xs text-left">
+                <ReportTable className="w-full text-xs text-left">
                   <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                     <tr>
                       <th className="py-2.5 px-3">Data / Turno</th>
@@ -4949,7 +4996,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                       ))
                     )}
                   </tbody>
-                </table>
+                </ReportTable>
               </div>
             </div>
 
@@ -5022,7 +5069,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
 
               {/* Tabela de Análises no Balanço Consolidado */}
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-xs text-left">
+                <ReportTable className="w-full text-xs text-left">
                   <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                     <tr>
                       <th className="py-2.5 px-3">Data / Hora</th>
@@ -5101,7 +5148,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                       })
                     )}
                   </tbody>
-                </table>
+                </ReportTable>
               </div>
             </div>
 
@@ -5170,7 +5217,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
 
               {/* Tabela de Auditoria no Balanço Consolidado */}
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-xs text-left">
+                <ReportTable className="w-full text-xs text-left">
                   <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                     <tr>
                       <th className="py-2.5 px-3">Data / Hora</th>
@@ -5207,7 +5254,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                       ))
                     )}
                   </tbody>
-                </table>
+                </ReportTable>
               </div>
             </div>
           </div>
@@ -5275,7 +5322,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
               Modalidade Selecionada: {subModoEscala} ({escalasFiltradas.length} registros)
             </div>
 
-            <table className="w-full text-xs text-left border-collapse">
+            <ReportTable className="w-full text-xs text-left border-collapse">
               <thead className="bg-slate-100 border-b border-slate-200 font-bold text-slate-700 uppercase">
                 <tr>
                   <th className="py-2.5 px-3">Funcionário</th>
@@ -5308,7 +5355,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ReportTable>
           </div>
         )}
 
@@ -5318,38 +5365,36 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
             <h4 className="text-xs font-bold uppercase text-slate-700">
               Tanques Cadastrados ({tanques.length})
             </h4>
-            <table className="w-full text-xs text-left border-collapse">
+            <ReportTable className="w-full text-xs text-left border-collapse">
               <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
                 <tr>
-                  <th className="py-2 px-3">Código</th>
+                  
                   <th className="py-2 px-3">Combustível</th>
-                  <th className="py-2 px-3">Capacidade</th>
+                  
                   <th className="py-2 px-3">Estoque Atual</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {tanques.map((t) => (
                   <tr key={t.id}>
-                    <td className="py-2 px-3 font-bold">{t.codigo}</td>
+                    
                     <td className="py-2 px-3">{t.produto}</td>
-                    <td className="py-2 px-3 font-mono">
-                      {t.capacidadeNominal.toLocaleString('pt-BR')} L
-                    </td>
+                    
                     <td className="py-2 px-3 font-mono font-bold">
                       {t.volumeAtual.toLocaleString('pt-BR')} L
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ReportTable>
 
             <h4 className="text-xs font-bold uppercase text-slate-700 pt-2">
               Bicos Cadastrados ({bicos.length})
             </h4>
-            <table className="w-full text-xs text-left border-collapse">
+            <ReportTable className="w-full text-xs text-left border-collapse">
               <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
                 <tr>
-                  <th className="py-2 px-3">Bico / Bomba</th>
+                  <th className="py-2 px-3">Bico</th>
                   <th className="py-2 px-3">Combustível</th>
                   <th className="py-2 px-3">Status</th>
                 </tr>
@@ -5358,20 +5403,20 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                 {bicos.map((b) => (
                   <tr key={b.id}>
                     <td className="py-2 px-3 font-bold">
-                      Bico {String(b.numero).padStart(2, '0')} ({b.bomba} • Lado {b.lado})
+                      Bico {String(b.numero).padStart(2, '0')}
                     </td>
                     <td className="py-2 px-3">{b.produto}</td>
                     <td className="py-2 px-3 font-bold">{b.status}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ReportTable>
           </div>
         )}
 
         {/* Tabela de Fechamentos */}
         {tipo === 'FECHAMENTOS' && (
-          <table className="w-full text-xs text-left">
+          <ReportTable className="w-full text-xs text-left">
             <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
               <tr>
                 <th className="py-2.5 px-3">Data / Turno</th>
@@ -5400,7 +5445,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ReportTable>
         )}
 
         {/* Relatório Completo de Aferições de Bicos */}
@@ -5408,7 +5453,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
 
         {/* Tabela de Faltas e Ocorrências */}
         {tipo === 'FALTAS' && (
-          <table className="w-full text-xs text-left">
+          <ReportTable className="w-full text-xs text-left">
             <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
               <tr>
                 <th className="py-2.5 px-3">Data</th>
@@ -5431,7 +5476,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ReportTable>
         )}
 
         {/* Tabela de Densidades / Análises */}
@@ -5490,7 +5535,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
             </div>
 
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-xs text-left">
+              <ReportTable className="w-full text-xs text-left">
                 <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
                   <tr>
                     <th className="py-2.5 px-3">Data / Hora</th>
@@ -5569,14 +5614,14 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     })
                   )}
                 </tbody>
-              </table>
+              </ReportTable>
             </div>
           </div>
         )}
 
         {/* Tabela de Conformidade */}
         {tipo === 'CONFORMIDADE' && (
-          <table className="w-full text-xs text-left">
+          <ReportTable className="w-full text-xs text-left">
             <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
               <tr>
                 <th className="py-2.5 px-3">Data</th>
@@ -5597,12 +5642,12 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ReportTable>
         )}
 
         {/* Tabela de Funcionários */}
         {tipo === 'FUNCIONARIOS' && (
-          <table className="w-full text-xs text-left">
+          <ReportTable className="w-full text-xs text-left">
             <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
               <tr>
                 <th className="py-2.5 px-3">Nome</th>
@@ -5625,7 +5670,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ReportTable>
         )}
 
         {/* Tabela de Auditoria */}
@@ -5683,7 +5728,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
             </div>
 
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-xs text-left">
+              <ReportTable className="w-full text-xs text-left">
                 <thead className="bg-slate-50 border-b font-semibold text-slate-700 uppercase">
                   <tr>
                     <th className="py-2.5 px-3">Data / Hora</th>
@@ -5718,7 +5763,7 @@ export const RelatoriosView: React.FC<RelatoriosProps> = ({
                     ))
                   )}
                 </tbody>
-              </table>
+              </ReportTable>
             </div>
           </div>
         )}
