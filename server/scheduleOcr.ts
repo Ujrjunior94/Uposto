@@ -99,7 +99,7 @@ export function parseScheduleResponse(content: string, truncated = false) {
 export async function analyzeSchedule(body: any) {
   const { reference, mimeType, base64 } = validateImagePayload(body);
   const prompt = buildSchedulePrompt(reference);
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.gemini_key;
   const routerKey = process.env.OPENROUTER_API_KEY;
   let parsed: any;
   let engine: string;
