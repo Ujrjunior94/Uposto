@@ -188,6 +188,17 @@ export async function analyzeSchedule(body: any) {
   return { success: true, data: parsed, motorUtilizado: engine };
 }
 
+export function classifyProviderError(error: any) {
+  const code = Number(error?.status || error?.statusCode || error?.code || 0);
+  const message = String(error?.message || '').toLowerCase();
+  if (code === 429 || /quota|resource_exhausted/.test(message)) return { status: 429, error: 'O Gemini atingiu o limite de uso ou está sem cota disponível. Verifique a cota da chave no Google AI Studio antes de tentar novamente.', category: 'quota' };
+  if (code === 401 || /api.key.not.valid|api_key_invalid|invalid api key/.test(message)) return { status: 503, error: 'A chave do Gemini foi recusada. Confira o valor salvo na Vercel e se a chave está ativa no Google AI Studio.', category: 'invalid_key' };
+  if (code === 403) return { status: 503, error: 'A chave do Gemini não tem permissão para usar este serviço. Verifique as restrições da chave e a API habilitada no projeto Google.', category: 'permission' };
+  if (code === 404) return { status: 503, error: 'O modelo de IA configurado não está disponível para esta chave. A configuração do modelo precisa ser ajustada no servidor.', category: 'model' };
+  if (/timeout|timed out|abort/.test(message)) return { status: 504, error: 'A IA demorou demais para responder. Recorte apenas a tabela da escala e tente novamente.', category: 'timeout' };
+  return { status: 502, error: 'O provedor de IA falhou ao processar a imagem. Tente novamente em instantes.', category: 'provider' };
+}
+
 export default async function scheduleOcrHandler(req: any, res: any) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST")
@@ -198,22 +209,11 @@ export default async function scheduleOcrHandler(req: any, res: any) {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     return res.status(200).json(await analyzeSchedule(body));
   } catch (error: any) {
-    const status =
-      error instanceof ScheduleOcrError
-        ? error.status
-        : error instanceof SyntaxError
-          ? 400
-          : 502;
-    return res
-      .status(status)
-      .json({
-        success: false,
-        error:
-          error instanceof ScheduleOcrError
-            ? error.message
-            : status === 400
-              ? "O envio da imagem é inválido."
-              : "Não foi possível concluir a leitura. Verifique a conexão e a configuração do serviço de IA.",
-      });
+    if (error instanceof ScheduleOcrError) return res.status(error.status).json({ success: false, error: error.message });
+    if (error instanceof SyntaxError) return res.status(400).json({ success: false, error: 'O envio da imagem é inválido.' });
+    const failure = classifyProviderError(error);
+    // Never log the SDK error object: it may contain request data or credentials.
+    console.error('[schedule-ocr]', { category: failure.category, status: failure.status, providerStatus: Number(error?.status || error?.statusCode || 0) });
+    return res.status(failure.status).json({ success: false, error: failure.error });
   }
 }
