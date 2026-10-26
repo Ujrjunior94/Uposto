@@ -1,3 +1,4 @@
+import { LeituraEscalaCores } from './LeituraEscalaCores';
 import { prepararImportacaoEscala } from "./prepararImportacaoEscala";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -50,6 +51,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
   onSuccess,
 }) => {
   const { postoId } = useAuth();
+  const [localMode, setLocalMode] = useState(true);
   const [image, setImage] = useState("");
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -405,6 +407,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                   }}
                 />
               </div>
+              {image && <div className="space-y-3"><div className="grid grid-cols-2 gap-2"><button type="button" disabled={reading} aria-pressed={localMode} className={localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(true);setError('')}}>Pelas cores · sem IA</button><button type="button" disabled={reading} aria-pressed={!localMode} className={!localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(false);setError('')}}>Leitura com IA</button></div>{localMode && <LeituraEscalaCores image={image} employees={activeEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} />}</div>}
               <p className="rounded-xl bg-blue-50 p-4 text-sm leading-relaxed text-blue-900">
                 A leitura é uma sugestão. Você confere nomes, dias e turnos
                 antes de salvar. Células vazias e dúvidas ficam pendentes;
@@ -484,6 +487,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                   Adicionar célula
                 </button>
               </div>
+              {localMode && <button type="button" disabled={saving} className="action-secondary w-full" onClick={()=>{setRecords(validated.map(r=>r.rawShiftText && r.employeeId && r.day>0 && r.shiftId ? {...r,conferidoManualmente:true}:r));setApproved(false)}}>Conferi na foto todas as células reconhecidas por cor</button>}
               <div className="flex flex-wrap items-center gap-3">
                 <input
                   aria-label="Buscar funcionário na leitura"
@@ -721,7 +725,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
           ) : (
             <button
               type="button"
-              disabled={!image || reading || preparing}
+              disabled={!image || reading || preparing || localMode}
               onClick={readImage}
               className="action-primary"
             >
@@ -734,7 +738,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                 ? "Lendo imagem…"
                 : preparing
                   ? "Preparando foto…"
-                  : "Ler escala"}
+                  : localMode ? "Use a prévia pelas cores acima" : "Ler escala com IA"}
             </button>
           )}
         </footer>
