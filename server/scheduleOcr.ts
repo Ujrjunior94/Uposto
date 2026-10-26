@@ -1,3 +1,4 @@
+import { analyzeWithDocumentAi, DocumentAiError } from "./documentAiSchedule.js";
 import { GoogleGenAI } from "@google/genai";
 
 export class ScheduleOcrError extends Error {
@@ -98,6 +99,9 @@ export function parseScheduleResponse(content: string, truncated = false) {
 // One server-only implementation shared by local Express and Vercel.
 export async function analyzeSchedule(body: any) {
   const { reference, mimeType, base64 } = validateImagePayload(body);
+  if (process.env.SCHEDULE_OCR_PROVIDER === "document-ai") {
+    return analyzeWithDocumentAi({ base64, mimeType });
+  }
   const prompt = buildSchedulePrompt(reference);
   const geminiKey = process.env.GEMINI_API_KEY || process.env.gemini_key;
   const routerKey = process.env.OPENROUTER_API_KEY;
@@ -209,7 +213,7 @@ export default async function scheduleOcrHandler(req: any, res: any) {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     return res.status(200).json(await analyzeSchedule(body));
   } catch (error: any) {
-    if (error instanceof ScheduleOcrError) return res.status(error.status).json({ success: false, error: error.message });
+    if (error instanceof ScheduleOcrError || error instanceof DocumentAiError) return res.status(error.status).json({ success: false, error: error.message });
     if (error instanceof SyntaxError) return res.status(400).json({ success: false, error: 'O envio da imagem é inválido.' });
     const failure = classifyProviderError(error);
     // Never log the SDK error object: it may contain request data or credentials.
