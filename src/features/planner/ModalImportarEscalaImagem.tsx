@@ -1,3 +1,4 @@
+import { LeituraEscalaGratuita } from "./LeituraEscalaGratuita";
 import { LeituraEscalaCores } from './LeituraEscalaCores';
 import { prepararImportacaoEscala } from "./prepararImportacaoEscala";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +16,6 @@ import {
 import { Funcionario, Escala } from "../../types";
 import { useAuth } from "../../contexts/AuthContext";
 import { PostoSubcollectionRepository } from "../../repositories/firestoreRepository";
-import { scheduleImageImporter } from "../../services/ai/scheduleImageImporter";
 import {
   TURNOS_PADRAO_POSTO,
   RegistroImportadoReconhecido,
@@ -186,34 +186,6 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
     }
   }
 
-  async function readImage() {
-    if (!image || reading || preparing) return;
-    if (!activeEmployees.length) {
-      setError("Cadastre os funcionários antes de importar a escala.");
-      return;
-    }
-    setReading(true);
-    setError("");
-    setApproved(false);
-    const controller = new AbortController();
-    requestRef.current = controller;
-    try {
-      const result = await scheduleImageImporter.processImage(
-        image,
-        activeEmployees,
-        TURNOS_PADRAO_POSTO,
-        month,
-        year,
-        { signal: controller.signal },
-      );
-      if (!controller.signal.aborted) setRecords(result.records);
-    } catch (err: any) {
-      if (!controller.signal.aborted)
-        setError(err.message || "Não foi possível ler a escala.");
-    } finally {
-      setReading(false);
-    }
-  }
 
   async function save() {
     if (
@@ -407,7 +379,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                   }}
                 />
               </div>
-              {image && <div className="space-y-3"><div className="grid grid-cols-2 gap-2"><button type="button" disabled={reading} aria-pressed={localMode} className={localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(true);setError('')}}>Pelas cores · sem IA</button><button type="button" disabled={reading} aria-pressed={!localMode} className={!localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(false);setError('')}}>Leitura com IA</button></div>{localMode && <LeituraEscalaCores image={image} employees={activeEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} />}</div>}
+              <div className="space-y-3"><div className="grid grid-cols-2 gap-2"><button type="button" disabled={reading} aria-pressed={localMode} className={localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(true);setError('')}}>Foto ou tabela · grátis</button><button type="button" disabled={reading || !image} aria-pressed={!localMode} className={!localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(false);setError('')}}>Cores · opcional</button></div>{localMode ? <LeituraEscalaGratuita image={image} employees={activeEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} /> : image && <LeituraEscalaCores image={image} employees={activeEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} />}</div>
               <p className="rounded-xl bg-blue-50 p-4 text-sm leading-relaxed text-blue-900">
                 A leitura é uma sugestão. Você confere nomes, dias e turnos
                 antes de salvar. Células vazias e dúvidas ficam pendentes;
@@ -487,7 +459,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                   Adicionar célula
                 </button>
               </div>
-              {localMode && <button type="button" disabled={saving} className="action-secondary w-full" onClick={()=>{setRecords(validated.map(r=>r.rawShiftText && r.employeeId && r.day>0 && r.shiftId ? {...r,conferidoManualmente:true}:r));setApproved(false)}}>Conferi na foto todas as células reconhecidas por cor</button>}
+              {<button type="button" disabled={saving} className="action-secondary w-full" onClick={()=>{setRecords(validated.map(r=>r.rawShiftText && r.employeeId && r.day>0 && r.shiftId ? {...r,conferidoManualmente:true}:r));setApproved(false)}}>Conferi todas as células reconhecidas com a escala original</button>}
               <div className="flex flex-wrap items-center gap-3">
                 <input
                   aria-label="Buscar funcionário na leitura"
@@ -723,23 +695,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                 : `Confirmar ${validated.length} células no Planner`}
             </button>
           ) : (
-            <button
-              type="button"
-              disabled={!image || reading || preparing || localMode}
-              onClick={readImage}
-              className="action-primary"
-            >
-              {reading || preparing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ImagePlus className="h-4 w-4" />
-              )}
-              {reading
-                ? "Lendo imagem…"
-                : preparing
-                  ? "Preparando foto…"
-                  : localMode ? "Use a prévia pelas cores acima" : "Ler escala com IA"}
-            </button>
+            <p className="text-sm text-slate-500">Gere a prévia gratuita acima para continuar.</p>
           )}
         </footer>
       </div>
