@@ -55,7 +55,10 @@ export function parseOcrGratuito(words:OcrWord[], names:string[], totalDays:numb
     const right=i===header.length-1?cx(h.word)+(i?cx(h.word)-cx(header[i-1].word):rowGap*4)/2:(cx(h.word)+cx(header[i+1].word))/2;
     const cell=clean.filter(word=>cx(word)>left&&cx(word)<right&&Math.abs(cy(word)-cy(anchor))<rowGap*.4);
     const rawText=cell.map(word=>word.text).join(' ');
-    return {day,columnIndex:day,rawText,confidence:codigoGratuito(rawText)?Math.min(.7,...cell.map(word=>word.confidence/100)):0};
+    // Common glyph confusion is a suggestion with low confidence; keep literal OCR for review.
+    const raw=normal(rawText).replace(/\s+/g,'');
+    const suggested=/^T[IL]$/.test(raw)?'T1':/^[IL]T$/.test(raw)?'1T':rawText;
+    return {day,columnIndex:day,rawText:suggested,originalText:rawText,confidence:codigoGratuito(suggested)?Math.min(suggested !== rawText ? .45 : .7,...cell.map(word=>word.confidence/100)):0};
   })}));
   return {grid:{rows},document:{month:null,year:null},motorUtilizado:'OCR local gratuito'};
 }

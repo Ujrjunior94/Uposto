@@ -13,7 +13,9 @@ export function LeituraEscalaGratuita({image,employees,month,year,onResult}:Prop
  function deliver(raw:any){
   const result=processarLeituraBrutaParaValidacao(raw,employees,TURNOS_PADRAO_POSTO,month,year);
   if(!result.records.length)throw Error('Nenhuma célula reconhecida. Confira o formato da tabela.');
-  onResult(result.records.map(row=>({...row,conferidoManualmente:false,confidence:Math.min(.7,row.confidence)})));
+  const originals=new Map<string,string>();
+  for(const row of raw.grid?.rows||[])for(const cell of row.dayCells||[])if(cell.originalText!==undefined)originals.set(`${row.rowIndex}/${cell.day}`,cell.originalText);
+  onResult(result.records.map(row=>({...row,rawShiftText:originals.get(`${row.rowIndex}/${row.day}`) ?? row.rawShiftText,conferidoManualmente:false,confidence:Math.min(.7,row.confidence)})));
  }
  async function read(){
   if(busy)return;setError('');const run=++version.current;
@@ -24,7 +26,7 @@ export function LeituraEscalaGratuita({image,employees,month,year,onResult}:Prop
    const {createWorker,OEM,PSM}=await import('tesseract.js');
    const w=await createWorker('eng',OEM.LSTM_ONLY,{workerPath:'/ocr/worker.min.js',corePath:'/ocr',langPath:'/ocr',logger:message=>{if(version.current===run)setStatus(`${message.status==='recognizing text'?'Reconhecendo texto':'Preparando leitor'} · ${Math.round(message.progress*100)}%`);}});
    if(version.current!==run){await w.terminate();return;}worker.current=w;
-   await w.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT,preserve_interword_spaces:'1'});
+   await w.setParameters({tessedit_pageseg_mode:PSM.SINGLE_BLOCK,preserve_interword_spaces:'1'});
    const img=new Image();img.src=image;await img.decode();
    const scale=Math.min(2,2600/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
    const ctx=canvas.getContext('2d');if(!ctx)throw Error('O navegador não conseguiu preparar a foto.');ctx.drawImage(img,0,0,canvas.width,canvas.height);

@@ -269,7 +269,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
             <p className="text-xs font-semibold text-blue-600">
               {records.length
                 ? "2. Conferir e importar"
-                : "1. Enviar uma imagem"}
+                : "1. Foto ou tabela gratuita"}
             </p>
             <h2
               id="import-title"
