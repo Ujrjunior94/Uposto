@@ -30,3 +30,7 @@ test('OCR recusa nomes ambíguos e dias duplicados',()=>{
  assert.throws(()=>parseOcrGratuito([w('FABIO',100,0),w('FABIO',200,0)],['FABIO'],2),/nome/);
  assert.throws(()=>parseOcrGratuito([w('FABIO',100,0),w('01',0,30),w('01',0,60)],['FABIO'],2),/repetidos/);
 });
+test('sugestão Tl preserva OCR literal e fica com confiança baixa',()=>{
+ const rows=parseOcrGratuito([w('FABIO',100,0),w('01',0,30),w('02',0,60),w('Tl',100,30),w('T2',100,60)],['FABIO'],2).grid.rows;
+ assert.equal(rows[0].dayCells[0].rawText,'T1');assert.equal(rows[0].dayCells[0].originalText,'Tl');assert.equal(rows[0].dayCells[0].confidence,.45);
+});
