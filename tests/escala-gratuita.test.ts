@@ -34,3 +34,28 @@ test('sugestão Tl preserva OCR literal e fica com confiança baixa',()=>{
  const rows=parseOcrGratuito([w('FABIO',100,0),w('01',0,30),w('02',0,60),w('Tl',100,30),w('T2',100,60)],['FABIO'],2).grid.rows;
  assert.equal(rows[0].dayCells[0].rawText,'T1');assert.equal(rows[0].dayCells[0].originalText,'Tl');assert.equal(rows[0].dayCells[0].confidence,.45);
 });
+
+test('OCR lê nomes na lateral e dias no alto sem transpor funcionários e turnos',()=>{
+ const words=[w('FABIO',0,30),w('ISMAEL',0,60),w('01',100,0),w('02',200,0),w('T1',100,30),w('T2',200,30),w('FOLGA',100,60)];
+ const rows=parseOcrGratuito(words,['FABIO','ISMAEL'],2,{employeesInColumns:false}).grid.rows;
+ assert.equal(rows[0].dayCells[0].rawText,'T1');assert.equal(rows[0].dayCells[1].rawText,'T2');
+ assert.equal(rows[1].dayCells[0].rawText,'FOLGA');assert.equal(rows[1].dayCells[1].rawText,'');
+});
+test('OCR separa nomes compostos com o mesmo primeiro nome',()=>{
+ const words=[w('JOAO',100,0),w('SILVA',125,0),w('JOAO',200,0),w('SANTOS',225,0),w('01',0,30),w('02',0,60),w('T1',115,30),w('T2',215,30)];
+ const rows=parseOcrGratuito(words,['João Silva','João Santos'],2).grid.rows;
+ assert.equal(rows[0].employeeCell.rawText,'João Silva');assert.equal(rows[0].dayCells[0].rawText,'T1');
+ assert.equal(rows[1].employeeCell.rawText,'João Santos');assert.equal(rows[1].dayCells[0].rawText,'T2');
+});
+test('nomes compostos incompletos não resolvem dois funcionários pelo mesmo primeiro nome',()=>{
+ assert.throws(()=>parseOcrGratuito([w('JOAO',100,0),w('01',0,30)],['João Silva','João Santos'],1),/nome/);
+});
+test('recorte declarado mantém o dia real, inclusive com apenas um dia',()=>{
+ const rows=parseOcrGratuito([w('FABIO',100,0),w('15',0,30),w('T2',100,30)],['FABIO'],31,{firstDay:15,lastDay:15}).grid.rows;
+ assert.equal(rows[0].dayCells[0].day,15);assert.equal(rows[0].dayCells[0].rawText,'T2');
+});
+test('orientação incorreta e intervalo inválido não permitem deslocar a grade',()=>{
+ const words=[w('FABIO',0,30),w('ISMAEL',0,60),w('01',100,0),w('02',200,0)];
+ assert.throws(()=>parseOcrGratuito(words,['FABIO','ISMAEL'],2),/orientação/);
+ assert.throws(()=>parseOcrGratuito(words,['FABIO'],2,{firstDay:0}),/período|documento/);
+});
