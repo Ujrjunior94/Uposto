@@ -11,7 +11,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "diagnostico:escala": "tsx scripts/diagnostico-escala-firestore.ts",
-    "test:escala": "node --import tsx --test tests/schedule-ocr.test.ts tests/document-ai-schedule.test.ts tests/escala-gratuita.test.ts",
+    "test:escala": "node --import tsx --test tests/schedule-ocr.test.ts tests/document-ai-schedule.test.ts tests/escala-gratuita.test.ts tests/schedule-import-integrity.test.ts",
     "postinstall": "node src/features/planner/prepareLocalOcr.mjs"
   },
   "dependencies": {

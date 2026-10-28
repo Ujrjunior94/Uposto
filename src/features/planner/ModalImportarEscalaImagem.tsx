@@ -1,6 +1,7 @@
 import { LeituraEscalaGratuita } from "./LeituraEscalaGratuita";
 import { LeituraEscalaCores } from './LeituraEscalaCores';
 import { prepararImportacaoEscala } from "./prepararImportacaoEscala";
+import { conferirMatrizImportacao } from "./integridadeImportacaoEscala";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Camera,
@@ -60,6 +61,10 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
   const [search, setSearch] = useState("");
   const [onlyPending, setOnlyPending] = useState(false);
   const [approved, setApproved] = useState(false);
+  const [employeeIds, setEmployeeIds] = useState<string[]>([]);
+  const [partialPeriod, setPartialPeriod] = useState(false);
+  const [firstDay, setFirstDay] = useState(1);
+  const [lastDay, setLastDay] = useState(31);
   const [rotation, setRotation] = useState(0);
   const [preparing, setPreparing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,9 +76,13 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
   const [year, month] = anoMesAtual.split("-").map(Number);
   const days = new Date(year, month, 0).getDate();
   const activeEmployees = useMemo(
-    () => funcionarios.filter((f) => f.status !== "INATIVO"),
-    [funcionarios],
+    () => funcionarios.filter((f) => f.status !== "INATIVO" && (!f.postoId || f.postoId === postoId)),
+    [funcionarios, postoId],
   );
+  const selectedEmployees = activeEmployees.filter(f => employeeIds.includes(f.id));
+  const scope = useMemo(() => ({ funcionarioIds: employeeIds,
+    primeiroDia: partialPeriod ? firstDay : 1, ultimoDia: partialPeriod ? lastDay : days,
+  }), [employeeIds, partialPeriod, firstDay, lastDay, days]);
   const validated = useMemo(
     () =>
       revalidarRegistrosEscala(
@@ -85,6 +94,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
     [records, activeEmployees, days],
   );
   const pending = validated.filter((r) => r.status !== "CONFIRMADO").length;
+  const integrity = useMemo(() => conferirMatrizImportacao(validated, scope, days), [validated, scope, days]);
   const employeeCount = new Set(
     validated.map((r) => r.employeeId || r.rawEmployeeText),
   ).size;
@@ -105,6 +115,11 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
     setRotation(0);
     setSearch("");
     setOnlyPending(false);
+    // Freeze the expected team when opening, independently of what OCR happens to return.
+    setEmployeeIds(funcionarios.filter(f => f.status !== "INATIVO" && (!f.postoId || f.postoId === postoId)).map(f => f.id));
+    setPartialPeriod(false);
+    setFirstDay(1);
+    setLastDay(days);
     const previous = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -115,7 +130,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
       document.body.style.overflow = previousOverflow;
       previous?.focus();
     };
-  }, [isOpen]);
+  }, [isOpen, anoMesAtual, postoId]);
 
   function update(id: string, changes: Partial<RegistroImportadoReconhecido>) {
     setApproved(false);
@@ -193,6 +208,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
       !approved ||
       !validated.length ||
       pending > 0 ||
+      !integrity.completa ||
       !postoId
     )
       return;
@@ -208,6 +224,8 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
         existing,
         postoId,
         anoMesAtual,
+        undefined,
+        scope,
       );
       salvarSnapshotImportacao(
         postoId,
@@ -297,6 +315,31 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
               {error}
             </div>
           )}
+          <details className="mb-4 rounded-xl border border-slate-200 bg-white p-4" open={!records.length}>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+              Equipe e período do documento · {employeeIds.length} funcionários · {scope.primeiroDia}–{scope.ultimoDia}
+            </summary>
+            <fieldset disabled={reading || saving || preparing} className="mt-3 space-y-3">
+              <legend className="sr-only">Definir a matriz esperada antes da leitura</legend>
+              <p className="text-sm text-slate-600">Marque todos os funcionários que aparecem na escala, incluindo auxiliares. A conferência exigirá uma célula por funcionário e dia deste período.</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {activeEmployees.map(employee => <label key={employee.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={employeeIds.includes(employee.id)} onChange={event => {
+                    const checked = event.target.checked;
+                    setEmployeeIds(ids => checked ? [...ids, employee.id] : ids.filter(id => id !== employee.id));
+                    setApproved(false);
+                  }} />{employee.nome}
+                </label>)}
+              </div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={partialPeriod} onChange={event => {setPartialPeriod(event.target.checked);setApproved(false);}} />Este documento cobre apenas parte do mês</label>
+              {partialPeriod && <div className="flex gap-3">
+                <label className="text-sm">Primeiro dia<input className="field-control mt-1" type="number" min={1} max={days} value={firstDay} onChange={event => {setFirstDay(Number(event.target.value));setApproved(false);}} /></label>
+                <label className="text-sm">Último dia<input className="field-control mt-1" type="number" min={firstDay} max={days} value={lastDay} onChange={event => {setLastDay(Number(event.target.value));setApproved(false);}} /></label>
+              </div>}
+              {!integrity.escopoValido && <p role="alert" className="text-sm text-amber-800">Selecione a equipe e um intervalo válido dentro deste mês.</p>}
+              {integrity.limiteExcedido && <p role="alert" className="text-sm text-amber-800">Este período supera 400 células. Declare um período menor para gravar todas as células de uma vez.</p>}
+            </fieldset>
+          </details>
           {!records.length ? (
             <div className="mx-auto max-w-2xl space-y-5">
               <div
@@ -379,7 +422,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
                   }}
                 />
               </div>
-              <div className="space-y-3"><div className="grid grid-cols-2 gap-2"><button type="button" disabled={reading} aria-pressed={localMode} className={localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(true);setError('')}}>Foto ou tabela · grátis</button><button type="button" disabled={reading || !image} aria-pressed={!localMode} className={!localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(false);setError('')}}>Cores · opcional</button></div>{localMode ? <LeituraEscalaGratuita image={image} employees={activeEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} /> : image && <LeituraEscalaCores image={image} employees={activeEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} />}</div>
+              <div className="space-y-3"><div className="grid grid-cols-2 gap-2"><button type="button" disabled={reading} aria-pressed={localMode} className={localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(true);setError('')}}>Foto ou tabela · grátis</button><button type="button" disabled={reading || !image} aria-pressed={!localMode} className={!localMode?'action-primary':'action-secondary'} onClick={()=>{setLocalMode(false);setError('')}}>Cores · opcional</button></div>{localMode ? <LeituraEscalaGratuita image={image} employees={selectedEmployees} month={month} year={year} firstDay={scope.primeiroDia} lastDay={scope.ultimoDia} onBusyChange={setReading} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} /> : image && <LeituraEscalaCores image={image} employees={selectedEmployees} month={month} year={year} onResult={(result)=>{setRecords(result);setApproved(false);setError('')}} />}</div>
               <p className="rounded-xl bg-blue-50 p-4 text-sm leading-relaxed text-blue-900">
                 A leitura é uma sugestão. Você confere nomes, dias e turnos
                 antes de salvar. Células vazias e dúvidas ficam pendentes;
@@ -397,6 +440,25 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
             </div>
           ) : (
             <div className="space-y-4">
+              <div role="status" className={`rounded-xl border p-4 text-sm ${integrity.completa ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+                <p className="font-semibold">Matriz do documento: {integrity.recebidos} de {integrity.esperados} células</p>
+                <p className="mt-1">{integrity.faltantes.length} faltantes · {integrity.duplicadas} duplicadas · {integrity.foraDoEscopo} fora da equipe ou período · {pending} pendentes</p>
+                {integrity.faltantes.length > 0 && <>
+                  <p className="mt-2">Confira especialmente: {[...new Set(integrity.faltantes.map(cell => activeEmployees.find(employee => employee.id === cell.funcionarioId)?.nome || cell.funcionarioId))].join(', ')}.</p>
+                  <button type="button" disabled={saving} className="action-secondary mt-3" onClick={() => {
+                    setRecords(old => [...old, ...integrity.faltantes.map(cell => ({
+                      id: crypto.randomUUID(), rowIndex: old.length, columnIndex: cell.dia,
+                      rawEmployeeText: activeEmployees.find(employee => employee.id === cell.funcionarioId)?.nome || '',
+                      rawShiftText: '', employeeId: cell.funcionarioId,
+                      employeeName: activeEmployees.find(employee => employee.id === cell.funcionarioId)?.nome || '',
+                      day: cell.dia, shiftId: null, shiftName: '', shiftSigla: '', confidence: 0,
+                      status: 'REVISAO' as const, observation: 'Célula não lida. Preencha comparando com o documento.',
+                      isFolga: false, horarioInicio: '00:00', horarioFim: '00:00', isCustomManual: true,
+                    }))]);
+                    setApproved(false);
+                  }}>Adicionar as células faltantes para preencher manualmente</button>
+                </>}
+              </div>
               <details
                 className="rounded-xl border border-slate-200 bg-white p-3"
                 open
@@ -645,16 +707,14 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
               {pending > 0 && (
                 <p className="flex items-start gap-2 text-sm text-amber-800">
                   <AlertTriangle className="h-4 w-4 shrink-0" />
-                  Corrija as pendências ou remova as células que não devem ser
-                  importadas. Nenhum registro será salvo enquanto houver
-                  dúvidas.
+                  Corrija as pendências e mantenha todas as células da equipe e do período declarados. Nenhum registro será salvo enquanto a matriz estiver incompleta ou houver dúvidas.
                 </p>
               )}
               <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={approved}
-                  disabled={pending > 0 || saving}
+                  disabled={!integrity.completa || saving}
                   onChange={(e) => setApproved(e.target.checked)}
                   className="mt-1"
                 />
@@ -685,7 +745,7 @@ export const ModalImportarEscalaImagem: React.FC<Props> = ({
           {records.length ? (
             <button
               type="button"
-              disabled={saving || pending > 0 || !approved || !postoId}
+              disabled={saving || !integrity.completa || !approved || !postoId}
               onClick={save}
               className="action-primary"
             >

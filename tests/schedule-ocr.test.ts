@@ -219,6 +219,8 @@ test("import plan reuses an existing ID and preserves untouched dates", () => {
     [old, untouched],
     "posto-test",
     "2026-10",
+    undefined,
+    { funcionarioIds: ["f0"], primeiroDia: 15, ultimoDia: 15 },
   );
   assert.equal(plan.updates.length, 1);
   assert.equal(plan.updates[0].id, old.id);
