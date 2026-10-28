@@ -1,5 +1,6 @@
 import type { Escala, EscalaStatus, Funcionario } from "../../types";
-import type { RegistroImportadoReconhecido } from "./importadorEscalaImagemService";
+import { revalidarRegistrosEscala, TURNOS_PADRAO_POSTO, type RegistroImportadoReconhecido } from "./importadorEscalaImagemService";
+import { conferirMatrizImportacao, type EscopoImportacaoEscala } from "./integridadeImportacaoEscala";
 
 /** Build a write plan without changing the database. Reuse IDs already present in the Planner. */
 export function prepararImportacaoEscala(
@@ -9,15 +10,27 @@ export function prepararImportacaoEscala(
   postoId: string,
   period: string,
   now = new Date().toISOString(),
+  scope?: EscopoImportacaoEscala,
 ) {
   if (!postoId || !/^\d{4}-(0[1-9]|1[0-2])$/.test(period) || !records.length)
     throw new Error("Selecione um posto, período e células válidas.");
   const [year, month] = period.split("-").map(Number);
   const days = new Date(year, month, 0).getDate();
+  const eligible = employees.filter(f => f.status !== "INATIVO" && (!f.postoId || f.postoId === postoId));
+  const manifest = scope || { funcionarioIds: eligible.map(f => f.id), primeiroDia: 1, ultimoDia: days };
+  if (manifest.funcionarioIds.some(id => !eligible.some(f => f.id === id)))
+    throw new Error("Confira os funcionários e o posto desta importação.");
+  // Recheck edited values at the write boundary; a stale CONFIRMADO flag is not evidence.
+  const checked = revalidarRegistrosEscala(records, eligible, TURNOS_PADRAO_POSTO, days);
+  const integrity = conferirMatrizImportacao(checked, manifest, days);
+  if (integrity.limiteExcedido)
+    throw new Error("A importação deve ter até 400 células para gravar tudo de uma vez. Declare um período menor do documento e confira todas as células desse período.");
+  if (!integrity.completa)
+    throw new Error(`Importação incompleta ou pendente: ${integrity.recebidos} de ${integrity.esperados} células; ${integrity.faltantes.length} faltantes, ${integrity.duplicadas} duplicadas e ${integrity.pendentes} pendentes. Confira a equipe, o período e cada célula antes de salvar.`);
   const replaced: Escala[] = [];
   const seen = new Set<string>();
-  const updates: Escala[] = records.map((r) => {
-    const employee = employees.find(
+  const updates: Escala[] = checked.map((r) => {
+    const employee = eligible.find(
       (f) => f.id === r.employeeId && f.status !== "INATIVO",
     );
     if (
@@ -39,7 +52,7 @@ export function prepararImportacaoEscala(
       );
     seen.add(key);
     const matches = existing.filter(
-      (e) => e.funcionarioId === employee.id && e.data === date,
+      (e) => (!e.postoId || e.postoId === postoId) && e.funcionarioId === employee.id && e.data === date,
     );
     if (matches.length > 1)
       throw new Error(
